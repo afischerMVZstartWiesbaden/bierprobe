@@ -5,11 +5,11 @@
 <meta name="theme-color" content="#0b0e1a"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="mobile-web-app-capable" content="yes"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Akademische Bierprobe 2027</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Special+Elite&family=Oswald:wght@400;600&display=swap" rel="stylesheet">
 <style>
+
 
 :root{
   --night:#0b0e1a; --navy:#111827; --navy2:#1c2540;
@@ -292,42 +292,60 @@ body::after{
   transition:opacity .2s;
 }
 #skip-btn:hover{opacity:1;border-color:rgba(255,255,255,.5);}
+
+
+#intro-screen{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:#000;
+  z-index:500;
+  display:flex;align-items:center;justify-content:center;
+}
+#intro-screen.hidden{
+  animation:fadeOut 600ms ease forwards;
+  pointer-events:none;
+}
+@keyframes fadeOut{ from{opacity:1;} to{opacity:0;visibility:hidden;} }
+#intro-video{
+  width:100%;height:100%;
+  object-fit:contain;display:block;
+}
+#tap-overlay{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  background:rgba(0,0,0,.85);
+  z-index:10;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+#skip-btn{
+  position:absolute;bottom:max(20px,4vh);right:max(20px,4vw);
+  background:rgba(0,0,0,.55);border:1.5px solid rgba(255,255,255,.25);
+  border-radius:4px;color:rgba(255,255,255,.7);
+  font-family:'Bebas Neue',cursive;font-size:15px;letter-spacing:2px;
+  padding:8px 18px;cursor:pointer;min-height:44px;
+  -webkit-tap-highlight-color:transparent;
+}
 </style>
 </head>
 <body>
 
-<!-- ═══ VIDEO INTRO ══════════════════════════════════════ -->
 <div id="intro-screen">
-  <!-- Tap-Overlay für iOS Audio-Unlock -->
-  <div id="tap-overlay" ontouchstart="startVideo()" onclick="startVideo()" style="
-    position:absolute;inset:0;
-    display:flex;flex-direction:column;
-    align-items:center;justify-content:center;
-    z-index:10;cursor:pointer;
-    -webkit-tap-highlight-color:transparent;
-    background:rgba(0,0,0,.75);
-  "
+  <video id="intro-video" playsinline webkit-playsinline preload="auto">
+    <source src="intro.mp4" type="video/mp4">
+  </video>
+  <div id="tap-overlay">
     <div style="font-family:'Bebas Neue',cursive;font-size:clamp(28px,7vw,42px);
-                letter-spacing:3px;color:#f0ece0;text-shadow:3px 3px 0 rgba(0,0,0,.5);
-                text-align:center;line-height:1.1;">
+                letter-spacing:3px;color:#f0ece0;text-align:center;line-height:1.1;">
       AKADEMISCHE<br>BIERPROBE<br>
       <span style="color:#e8a020;font-size:.7em;letter-spacing:6px;">2027</span>
     </div>
     <div style="margin-top:28px;font-family:'Bebas Neue',cursive;font-size:18px;
-                letter-spacing:3px;color:rgba(255,255,255,.6);
+                letter-spacing:3px;color:rgba(255,255,255,.7);
                 border:1.5px solid rgba(255,255,255,.3);padding:10px 24px;border-radius:4px;">
       ▶ TIPPEN ZUM STARTEN
     </div>
   </div>
-
-  <video id="intro-video"
-         playsinline
-         webkit-playsinline
-         preload="auto"
-         style="width:100%;height:100%;object-fit:contain;display:block;">
-    <source src="intro.mp4" type="video/mp4">
-  </video>
-  <button id="skip-btn" onclick="skipIntro()" ontouchstart="skipIntro()" style="min-height:44px;min-width:44px;">ÜBERSPRINGEN ▶</button>
+  <button id="skip-btn">ÜBERSPRINGEN ▶</button>
 </div>
 
 <!-- ═══ SPLASH / APP ════════════════════════════════════ -->
@@ -374,45 +392,47 @@ body::after{
   </div>
 </div>
 
+<script>
+function skipIntro(){
+  var s = document.getElementById('intro-screen');
+  if(!s) return;
+  s.classList.add('hidden');
+  setTimeout(function(){ if(s.parentNode) s.remove(); }, 650);
+}
 
+function doPlay(){
+  var overlay = document.getElementById('tap-overlay');
+  var v = document.getElementById('intro-video');
+  if(overlay) overlay.style.display = 'none';
+  v.play().then(function(){
+    console.log('playing', v.videoWidth, v.videoHeight);
+  }).catch(function(e){
+    console.log('error', e.name, e.message);
+    skipIntro();
+  });
+}
+
+document.getElementById('tap-overlay').addEventListener('click', doPlay);
+document.getElementById('tap-overlay').addEventListener('touchend', function(e){
+  e.preventDefault();
+  doPlay();
+});
+document.getElementById('skip-btn').addEventListener('click', skipIntro);
+document.getElementById('skip-btn').addEventListener('touchend', function(e){
+  e.preventDefault();
+  skipIntro();
+});
+
+var v = document.getElementById('intro-video');
+v.addEventListener('ended', skipIntro);
+v.addEventListener('error', function(e){ console.log('video error', e); skipIntro(); });
+setTimeout(function(){ if(document.getElementById('intro-screen')) skipIntro(); }, 30000);
+</script>
 
 <script>
-function startVideo(){
-  const overlay = document.getElementById('tap-overlay');
-  const v = document.getElementById('intro-video');
-  if(overlay) overlay.remove();
-
-  // Warte bis genug Daten da sind
-  if(v.readyState >= 2){
-    v.play().catch(()=>skipIntro());
-  } else {
-    v.addEventListener('canplay', ()=>{
-      v.play().catch(()=>skipIntro());
-    }, {once:true});
-    // Fallback nach 5s
-    setTimeout(()=>{ if(v.paused) skipIntro(); }, 5000);
-  }
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js');
 }
-
-function skipIntro(){
-  const s = document.getElementById('intro-screen');
-  s.classList.add('hidden');
-  setTimeout(()=>s.remove(), 650);
-}
-
-const vid = document.getElementById('intro-video');
-
-// Wenn Video zu Ende → automatisch zum Splash
-vid.addEventListener('ended', skipIntro);
-
-// Fallback: falls Autoplay blockiert → sofort Splash zeigen
-vid.addEventListener('error', skipIntro);
-setTimeout(()=>{
-  // Falls nach 15s noch nix passiert ist
-  if(document.getElementById('intro-screen')){
-    skipIntro();
-  }
-}, 15000);
 </script>
 
 </body>
