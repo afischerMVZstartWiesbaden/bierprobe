@@ -381,7 +381,17 @@ function startVideo(){
   const overlay = document.getElementById('tap-overlay');
   const v = document.getElementById('intro-video');
   if(overlay) overlay.remove();
-  v.play().catch(()=>skipIntro());
+
+  // Warte bis genug Daten da sind
+  if(v.readyState >= 2){
+    v.play().catch(()=>skipIntro());
+  } else {
+    v.addEventListener('canplay', ()=>{
+      v.play().catch(()=>skipIntro());
+    }, {once:true});
+    // Fallback nach 5s
+    setTimeout(()=>{ if(v.paused) skipIntro(); }, 5000);
+  }
 }
 
 function skipIntro(){
